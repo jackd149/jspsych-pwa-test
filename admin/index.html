@@ -7,6 +7,7 @@
     <script src="https://unpkg.com/jspsych@8"></script>
     <script src="https://unpkg.com/@jspsych/offline-storage@0.4.0"></script>
     <style>
+      [hidden] { display: none !important; }
       body {
         font-family:
           -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell,
@@ -124,51 +125,84 @@
     </style>
   </head>
   <body>
-    <h1>📊 Data Manager</h1>
+    <div id="admin-gate" class="card">
+      <form id="admin-form">
+        <label for="admin-code">Researcher code</label>
+        <input id="admin-code" type="text" inputmode="numeric" maxlength="3" autocomplete="off" />
+        <button type="submit">Open Data Manager</button>
+        <p id="code-error" role="alert"></p>
+      </form>
+    </div>
 
-    <div id="storage-warning"></div>
+    <div id="admin-content" hidden>
+      <h1>📊 Data Manager</h1>
 
-    <div class="card">
-      <h2>Statistics</h2>
-      <div class="stats">
-        <div class="stat-box">
-          <div class="stat-value" id="session-count">0</div>
-          <div class="stat-label">Total Sessions</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-value" id="completed-count">0</div>
-          <div class="stat-label">Completed Sessions</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-value" id="storage-used">0</div>
-          <div class="stat-label">Storage Used</div>
+      <div id="storage-warning"></div>
+
+      <div class="card">
+        <h2>Statistics</h2>
+        <div class="stats">
+          <div class="stat-box">
+            <div class="stat-value" id="session-count">0</div>
+            <div class="stat-label">Total Sessions</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="completed-count">0</div>
+            <div class="stat-label">Completed Sessions</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="storage-used">0</div>
+            <div class="stat-label">Storage Used</div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="card">
-      <h2>Export Data</h2>
-      <p>Download all collected data for analysis:</p>
-      <button onclick="exportData('csv')">Export as CSV</button>
-      <button onclick="exportData('json')">Export as JSON</button>
-      <button onclick="exportData('zip')">Export as ZIP</button>
-    </div>
+      <div class="card">
+        <h2>Export Data</h2>
+        <p>Download all collected data for analysis:</p>
+        <button onclick="exportData('csv')">Export as CSV</button>
+        <button onclick="exportData('json')">Export as JSON</button>
+        <button onclick="exportData('zip')">Export as ZIP</button>
+      </div>
 
-    <div class="card">
-      <h2>Sessions</h2>
-      <div id="session-list" class="session-list"></div>
-    </div>
+      <div class="card">
+        <h2>Sessions</h2>
+        <div id="session-list" class="session-list"></div>
+      </div>
 
-    <div class="card">
-      <h2>Danger Zone</h2>
-      <p>Permanently delete all data:</p>
-      <button class="danger" onclick="clearAllData()">Clear All Data</button>
-    </div>
+      <div class="card">
+        <h2>Danger Zone</h2>
+        <p>Permanently delete all data:</p>
+        <button class="danger" onclick="clearAllData()">Clear All Data</button>
+      </div>
 
-    <div style="margin-top: 20px">
-      <button class="secondary" onclick="window.location.href='../'">← Back to Experiment</button>
+      <div style="margin-top: 20px">
+        <button class="secondary" onclick="window.location.href='../index.html'">← Back to Experiment</button>
+      </div>
     </div>
+    <script>
+      document.getElementById("admin-form").addEventListener("submit", (event) => {
+        event.preventDefault();
 
-    <script src="admin.js"></script>
+        const code = document.getElementById("admin-code").value;
+        const error = document.getElementById("code-error");
+
+        if (!/^[0-9]{3}$/.test(code)) {
+          error.textContent = "Enter exactly three digits.";
+          return;
+        }
+
+        const script = document.createElement("script");
+        script.src = "admin.js";
+        script.onload = () => {
+          document.getElementById("admin-gate").hidden = true;
+          document.getElementById("admin-content").hidden = false;
+        };
+        script.onerror = () => {
+          error.textContent = "Could not load the data manager.";
+        };
+        document.body.appendChild(script);
+      });
+    </script>
   </body>
 </html>

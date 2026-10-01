@@ -1,106 +1,266 @@
-// Initialize jsPsych with offline storage (existing project provides jsPsychOfflineStorage)
-const jsPsych = jsPsychOfflineStorage.initJsPsychOffline({
-  display_element: 'jspsych-target'
-})
+const startButton = document.getElementById("start-button");
+const startScreen = document.getElementById("start-screen");
+const studyTarget = document.getElementById("study-target");
 
-// --- Helper: shape HTML generators ---
-const shapeSize = 80;
-const circleHtml = `<div style="width:${shapeSize}px;height:${shapeSize}px;border-radius:50%;background:#333;margin:0 auto;"></div>`;
-const squareHtml = `<div style="width:${shapeSize}px;height:${shapeSize}px;background:#333;margin:0 auto;"></div>`;
-const triangleHtml = `<div style="width:0;height:0;border-left:${shapeSize/2}px solid transparent;border-right:${shapeSize/2}px solid transparent;border-bottom:${shapeSize}px solid #333;margin:0 auto;"></div>`;
-const diamondHtml = `<div style="width:${shapeSize}px;height:${shapeSize}px;background:#333;transform:rotate(45deg);margin:0 auto;"></div>`;
+const VIDEO_FOLDER = "../Tablet_Study1_Videos/";
 
-const shapesMaster = [
-  { id: 'circle', html: circleHtml },
-  { id: 'square', html: squareHtml },
-  { id: 'triangle', html: triangleHtml },
-  { id: 'diamond', html: diamondHtml },
+const WARMUP_HOTSPOTS = {
+  1: [
+    { id: "other", x: 0, y: 0, width: 1280, height: 720 },
+    { id: "triangle", x: 148, y: 185, width: 367, height: 350 },
+    { id: "red_square", x: 798, y: 195, width: 327, height: 330 },
+  ],
+  2: [
+    { id: "other", x: 0, y: 0, width: 1280, height: 720 },
+    { id: "triangle", x: 826, y: 185, width: 368, height: 350 },
+    { id: "red_square", x: 164, y: 185, width: 349, height: 350 },
+  ],
+};
+
+const AGE_HOTSPOTS = [
+  ...[3, 4, 5, 6, 7].map((age, index) => ({
+    id: String(age), x: 40 + index * 255, y: 145, width: 180, height: 180,
+  })),
+  ...[8, 9, 10, 11, 12].map((age, index) => ({
+    id: String(age), x: 40 + index * 255, y: 395, width: 180, height: 180,
+  })),
 ];
 
-// Instructions (touch-friendly)
-const welcome = {
-  type: jsPsychHtmlButtonResponse,
-  stimulus: `
-    <h1>Find the circle</h1>
-    <p>On each trial you'll see four shapes. One of them is a circle.</p>
-    <p>Your task is to TAP the circle as quickly and accurately as possible.</p>
-  `,
-  choices: ['Start']
-};
+const THREE_CHOICE_AREAS = [
+  { x: 10, y: 250, width: 380, height: 215 },
+  { x: 450, y: 250, width: 380, height: 215 },
+  { x: 895, y: 250, width: 380, height: 215 },
+];
 
-// Generate trials: shuffle positions each trial, keep exactly one circle
-const numTrials = 6;
-const trials = [];
-for (let i = 0; i < numTrials; i++) {
-  // create a shallow copy and shuffle
-  const shuffled = jsPsych.randomization.shuffle(shapesMaster.slice());
-  const choicesHtml = shuffled.map(s => s.html);
-  const correctIndex = shuffled.findIndex(s => s.id === 'circle');
-
-  const trial = {
-    type: jsPsychHtmlButtonResponse,
-    stimulus: '',
-    choices: choicesHtml,
-    button_layout: 'grid',
-    grid_rows: 2,
-    button_html: function(choice) {
-      return `<button class="jspsych-btn" style="width:140px;height:140px;border:none;background:transparent;padding:0">${choice}</button>`;
-    },
-    data: {
-      task: 'shape_choice',
-      correct_index: correctIndex,
-    },
-    trial_duration: 3000,
-    on_finish: (data) => {
-      data.correct = data.response !== null && data.response === data.correct_index;
-    }
-  };
-
-  trials.push(trial);
-
-  // brief feedback after each trial
-  trials.push({
-    type: jsPsychHtmlKeyboardResponse,
-    stimulus: function() {
-      const last = jsPsych.data.get().last(1).values()[0];
-      if (!last) return '';
-      if (last.response === -1) return '<div style="font-size:24px;">No response recorded</div>';
-      return last.correct ? '<div style="font-size:24px;color:green;">Correct</div>' : '<div style="font-size:24px;color:red;">Incorrect</div>';
-    },
-    choices: 'NO_KEYS',
-    trial_duration: 400,
-  });
+function twoChoiceHotspots(leftChoice, rightChoice) {
+  return [
+    { id: leftChoice, x: 100, y: 170, width: 430, height: 450 },
+    { id: rightChoice, x: 750, y: 170, width: 430, height: 450 },
+  ];
 }
 
-// Debrief / summary
-const debrief = {
-  type: jsPsychHtmlButtonResponse,
-  stimulus: () => {
-    const trialsData = jsPsych.data.get().filter({ task: 'shape_choice' });
-    const valid = trialsData.filter(trial => trial.response !== -1);
-    const correct = trialsData.filter({ correct: true });
-    const accuracy = trialsData.count() > 0 ? Math.round((correct.count() / trialsData.count()) * 100) : 0;
-    const meanRt = valid.count() > 0 ? Math.round(valid.select('rt').mean()) : 'N/A';
+function sizeHotspotVideo() {
+  const container = document.getElementById("jspsych-video-hotspots-container");
+  const video = document.getElementById("jspsych-video-hotspots-stimulus");
+  container.style.zoom = String(Math.min(studyTarget.clientWidth / 1280, studyTarget.clientHeight / 720));
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+}
 
-    return `
-      <h2>Finished</h2>
-      <p>Accuracy: <strong>${accuracy}%</strong></p>
-      <p>Average RT (for responded trials): <strong>${meanRt} ms</strong></p>
-    `;
-  },
-  choices: ['End Experiment'],
-  on_finish: () => {
-    // Redirect back to index so the user can restart or manage data
-    try {
-      window.location.href = './';
-    } catch (e) {
-      // If running in a worker-less environment or unusual embed, ignore
-      console.warn('Redirect to index failed', e);
-    }
-  },
-};
+function videoTrial(filename, trialId) {
+  return {
+    type: jsPsychVideoButtonResponse,
+    stimulus: [`${VIDEO_FOLDER}${filename}`],
+    width: 1280,
+    height: 720,
+    choices: [],
+    trial_ends_after_video: true,
+    on_load: () => {
+      const video = document.getElementById("jspsych-video-button-response-stimulus");
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
+    },
+    data: { trial_id: trialId },
+  };
+}
 
-// Assemble timeline and run
-const timeline = [welcome].concat(trials, [debrief]);
+function twoChoiceQuestion(filename, trialId, leftChoice, rightChoice) {
+  return {
+    type: jsPsychVideoHotspots,
+    stimulus: `${VIDEO_FOLDER}${filename}`,
+    hotspots: twoChoiceHotspots(leftChoice, rightChoice),
+    hotspot_highlight_css: "background-color: transparent; border: 0;",
+    video_preload: false,
+    data: { trial_id: trialId, left_choice: leftChoice, right_choice: rightChoice },
+    on_load: sizeHotspotVideo,
+  };
+}
 
-jsPsych.run(timeline);
+function yesNoQuestion(filename, trialId, version) {
+  // Temporary visible answers: the videos do not show Yes/No tap targets.
+  const choices = version === 1 ? ["Yes", "No"] : ["No", "Yes"];
+  return {
+    type: jsPsychVideoButtonResponse,
+    stimulus: [`${VIDEO_FOLDER}${filename}`],
+    width: 1280,
+    height: 720,
+    choices,
+    response_allowed_while_playing: false,
+    trial_ends_after_video: false,
+    data: { trial_id: trialId },
+    on_load: () => {
+      studyTarget.classList.add("yes-no-trial");
+      const video = document.getElementById("jspsych-video-button-response-stimulus");
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
+    },
+    on_finish: (data) => {
+      data.answer = choices[data.response].toLowerCase();
+      studyTarget.classList.remove("yes-no-trial");
+    },
+  };
+}
+
+startButton.addEventListener("click", async () => {
+  startButton.disabled = true;
+
+  let jsPsych;
+  try {
+    jsPsych = await jsPsychOfflineStorage.initJsPsychOffline({
+      display_element: "study-target",
+      offline: {
+        dbName: "project-sprouts-tablet-study-1",
+        autoShowCompletionScreen: false,
+        typicalSessionSize: 100 * 1024,
+      },
+      on_finish: () => {
+        studyTarget.innerHTML = `
+          <div class="complete">
+            <h2>Study complete</h2>
+            <p>Please let a researcher know that you are done.</p>
+            <button type="button" onclick="location.reload()">Start again</button>
+            <a class="admin-link" href="admin/index.html">Researcher tools</a>
+          </div>`;
+      },
+    });
+  } catch (error) {
+    window.alert(`The study could not start because local data storage is unavailable: ${error.message}`);
+    startButton.disabled = false;
+    return;
+  }
+
+  startScreen.hidden = true;
+  studyTarget.hidden = false;
+  jsPsych.data.addProperties({ session_id: jsPsych.offline.sessionId });
+
+  const warmupVersion = Math.random() < 0.5 ? 1 : 2;
+
+  function warmupQuestion(filename, trialId) {
+    return {
+      type: jsPsychVideoHotspots,
+      stimulus: `${VIDEO_FOLDER}${filename}`,
+      hotspots: WARMUP_HOTSPOTS[warmupVersion],
+      hotspot_highlight_css: "background-color: transparent; border: 0;",
+      video_preload: false,
+      data: { trial_id: trialId, warmup_version: warmupVersion },
+      on_load: sizeHotspotVideo,
+      on_finish: (data) => {
+        data.correct = data.hotspot_clicked === "red_square";
+      },
+    };
+  }
+
+  const firstWarmup = warmupQuestion(`warmup_v${warmupVersion}.mp4`, "warmup_initial");
+  const retryWarmup = warmupQuestion(`warmup_redo_v${warmupVersion}.mp4`, "warmup_retry");
+
+  const retryIfNeeded = {
+    timeline: [retryWarmup],
+    conditional_function: () => {
+      const firstAnswer = jsPsych.data.get().filter({ trial_id: "warmup_initial" }).last(1).values()[0];
+      return firstAnswer?.correct === false;
+    },
+  };
+
+  const ageQuestion = {
+    type: jsPsychVideoHotspots,
+    stimulus: `${VIDEO_FOLDER}age.m4v`,
+    hotspots: AGE_HOTSPOTS,
+    hotspot_highlight_css: "background-color: transparent; border: 0;",
+    video_preload: false,
+    data: { trial_id: "age" },
+    on_load: sizeHotspotVideo,
+    on_finish: (data) => {
+      data.age_years = Number(data.hotspot_clicked);
+    },
+  };
+
+  const sarcaCondition = Math.random() < 0.5 ? "A" : "B";
+  const sarcaVersion = Math.random() < 0.5 ? 1 : 2;
+  const glorpVersion = Math.random() < 0.5 ? 1 : 2;
+  const closenessVersion = Math.random() < 0.5 ? 1 : 2;
+  const trial3Version = Math.random() < 0.5 ? 1 : 2;
+  const ecoSarcaVersion = Math.random() < 0.5 ? 1 : 2;
+  const ecoGlorpVersion = Math.random() < 0.5 ? 1 : 2;
+  const kindSarcaVersion = Math.random() < 0.5 ? 1 : 2;
+  const kindGlorpVersion = Math.random() < 0.5 ? 1 : 2;
+  jsPsych.data.addProperties({
+    sarca_condition: sarcaCondition,
+    sarca_video_version: sarcaVersion,
+    glorp_video_version: glorpVersion,
+    closeness_video_version: closenessVersion,
+    trial3_video_version: trial3Version,
+    eco_sarca_video_version: ecoSarcaVersion,
+    eco_glorp_video_version: ecoGlorpVersion,
+    kind_sarca_video_version: kindSarcaVersion,
+    kind_glorp_video_version: kindGlorpVersion,
+  });
+
+  const sarcaChoices = sarcaCondition === "A" ? ["ant", "grass"] : ["bee", "grass"];
+  const sarcaLeft = sarcaVersion === 1 ? sarcaChoices[0] : sarcaChoices[1];
+  const sarcaRight = sarcaVersion === 1 ? sarcaChoices[1] : sarcaChoices[0];
+  const glorpLeft = glorpVersion === 1 ? "oak_tree" : "kangaroo";
+  const glorpRight = glorpVersion === 1 ? "kangaroo" : "oak_tree";
+  const closenessChoices = closenessVersion === 1
+    ? ["really_far", "sort_of_close", "really_close"]
+    : ["really_close", "sort_of_close", "really_far"];
+  const closenessQuestion = {
+    type: jsPsychVideoHotspots,
+    stimulus: `${VIDEO_FOLDER}closenesstonature_affect_v${closenessVersion}.m4v`,
+    hotspots: THREE_CHOICE_AREAS.map((area, index) => ({ id: closenessChoices[index], ...area })),
+    hotspot_highlight_css: "background-color: transparent; border: 0;",
+    video_preload: false,
+    data: { trial_id: "closeness_to_nature" },
+    on_load: sizeHotspotVideo,
+  };
+  const scaleChoices = trial3Version === 1
+    ? ["not_at_all", "sometimes", "a_lot"]
+    : ["a_lot", "sometimes", "not_at_all"];
+  function scaleQuestion(filename, trialId) {
+    return {
+      type: jsPsychVideoHotspots,
+      stimulus: `${VIDEO_FOLDER}${filename}`,
+      hotspots: THREE_CHOICE_AREAS.map((area, index) => ({ id: scaleChoices[index], ...area })),
+      hotspot_highlight_css: "background-color: transparent; border: 0;",
+      video_preload: false,
+      data: { trial_id: trialId },
+      on_load: sizeHotspotVideo,
+    };
+  }
+
+  jsPsych.run([
+    // Trial 1
+    videoTrial("hello2.mp4", "hello_intro"),
+    firstWarmup,
+    retryIfNeeded,
+    videoTrial("warmup_end.mp4", "warmup_end"),
+    videoTrial("play_for_real.mp4", "play_for_real"),
+    ageQuestion,
+    twoChoiceQuestion(`ind_sarca_${sarcaCondition}_v${sarcaVersion}.m4v`, "sarca", sarcaLeft, sarcaRight),
+    twoChoiceQuestion(`glorp_v${glorpVersion}.mp4`, "glorp", glorpLeft, glorpRight),
+    // Trial 2
+    closenessQuestion,
+    // Trial 3
+    videoTrial(`practice_warmup_v${trial3Version}.mp4`, "practice_warmup_intro"),
+    scaleQuestion(`practice_birds_fly_v${trial3Version}.m4v`, "practice_birds_fly"),
+    videoTrial(`practice_birds_fly_feedback_v${trial3Version}.mp4`, "practice_birds_fly_feedback"),
+    scaleQuestion(`practice_animals_lay_eggs_v${trial3Version}.m4v`, "practice_animals_lay_eggs"),
+    videoTrial(`practice_animals_lay_eggs_feedback_v${trial3Version}.mp4`, "practice_animals_lay_eggs_feedback"),
+    scaleQuestion(`practice_bird_car_v${trial3Version}.m4v`, "practice_bird_car"),
+    videoTrial(`practice_bird_car_feedback_v${trial3Version}.mp4`, "practice_bird_car_feedback"),
+    videoTrial("play_for_real.mp4", "attitude_intro"),
+    scaleQuestion(`mor_tree_important_v${trial3Version}.m4v`, "tree_important"),
+    scaleQuestion(`mor_bug_important_v${trial3Version}.m4v`, "bug_important"),
+    scaleQuestion(`mor_tree_protect_v${trial3Version}.m4v`, "tree_protect"),
+    scaleQuestion(`mor_bug_protect_v${trial3Version}.m4v`, "bug_protect"),
+    scaleQuestion(`exp_time_v${trial3Version}.m4v`, "time"),
+    scaleQuestion(`exp_books_shows_v${trial3Version}.m4v`, "books"),
+    // Trial 4
+    videoTrial("mem_intro.mp4", "mem_intro"),
+    yesNoQuestion(`eco_sarca_${sarcaCondition}_v${ecoSarcaVersion}.mp4`, "eco_sarca", ecoSarcaVersion),
+    yesNoQuestion(`eco_glorp_v${ecoGlorpVersion}.mp4`, "eco_glorp", ecoGlorpVersion),
+    yesNoQuestion(`kind_sarca_v${kindSarcaVersion}.mp4`, "kind_sarca", kindSarcaVersion),
+    yesNoQuestion(`kind_glorp_v${kindGlorpVersion}.mp4`, "kind_glorp", kindGlorpVersion),
+    // Ending
+    videoTrial("thanksforplaying_audio.mp4", "study_end"),
+  ]);
+});
