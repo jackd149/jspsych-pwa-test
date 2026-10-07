@@ -172,10 +172,10 @@ function yesNoQuestion(filename, trialId, version) {
       studyTarget.classList.add("yes-no-trial");
       const video = document.getElementById("jspsych-video-button-response-stimulus");
       const buttonGroup = document.getElementById("jspsych-video-button-response-btngroup");
-      const stage = document.createElement("div");
-      stage.className = "yes-no-video-stage";
-      video.before(stage);
-      stage.append(video, buttonGroup);
+      // Keep the video attached to its original wrapper so playback is not interrupted.
+      const stage = video.parentElement;
+      stage.classList.add("yes-no-video-stage");
+      stage.append(buttonGroup);
       video.setAttribute("playsinline", "");
       video.setAttribute("webkit-playsinline", "");
     },
