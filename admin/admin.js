@@ -1,5 +1,5 @@
 // Get offline data manager (without creating a new session)
-const offline = jsPsychOfflineStorage.getOfflineDataManager();
+const offline = jsPsychOfflineStorage.getOfflineDataManager("project-sprouts-tablet-study-1");
 
 async function init() {
   await updateStats();

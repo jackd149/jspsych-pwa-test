@@ -38,6 +38,30 @@
         cursor: pointer;
       }
       .start-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+      .study-fields { display: grid; gap: 16px; max-width: 32rem; margin: 0 auto 24px; text-align: left; }
+      .study-fields label { display: grid; gap: 6px; font-weight: 700; }
+      .study-fields input { width: 100%; min-height: 52px; border: 1px solid #789184; border-radius: 8px; padding: 12px; font: inherit; }
+      button:disabled { opacity: 0.45; cursor: not-allowed; }
+      #child-start-screen {
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        padding: 24px;
+        background: white;
+      }
+      #child-start-screen img { width: min(90vw, 900px); height: 55vh; height: 55dvh; object-fit: contain; }
+      #child-start-button {
+        background: #31851d;
+        min-width: min(70vw, 360px);
+        min-height: 100px;
+        border-radius: 24px;
+        font-size: clamp(2rem, 6vw, 3.5rem);
+        touch-action: manipulation;
+      }
       .admin-link {
         display: inline-flex;
         align-items: center;
@@ -80,20 +104,33 @@
         width: auto;
         height: auto;
       }
-      #study-target.yes-no-trial #jspsych-video-button-response-stimulus {
-        max-height: calc(100dvh - 110px);
-      }
+      .yes-no-video-stage { position: relative; width: min(100vw, 177.7778dvh); aspect-ratio: 16 / 9; }
+      #study-target.yes-no-trial #jspsych-video-button-response-stimulus { width: 100%; height: 100%; }
       #study-target.yes-no-trial #jspsych-video-button-response-btngroup {
+        position: absolute;
+        bottom: 6%;
+        left: 0;
+        width: 100%;
+        z-index: 2;
         display: flex;
-        justify-content: center;
-        gap: 20px;
-        margin-top: 16px;
+        justify-content: space-evenly;
+        margin: 0;
+        pointer-events: none;
       }
       #study-target.yes-no-trial #jspsych-video-button-response-btngroup button {
-        min-width: clamp(120px, 25vw, 180px);
-        min-height: 64px;
-        font-size: 1.4rem;
+        width: 26%;
+        max-width: 320px;
+        min-height: 0;
+        pointer-events: auto;
       }
+      #study-target.yes-no-trial #jspsych-video-button-response-btngroup .yes-no-image-button {
+        padding: 0;
+        background: transparent;
+        border: 0;
+        touch-action: manipulation;
+      }
+      .yes-no-image-button img { display: block; width: 100%; height: auto; max-height: 24dvh; object-fit: contain; }
+      .yes-no-image-button:active { transform: scale(0.95); }
       #study-target #jspsych-video-hotspots-stimulus {
         display: block;
         width: 1280px;
@@ -106,6 +143,16 @@
       .jspsych-video-hotspots-hotspot[data-hotspot-id="other"] { cursor: default !important; }
       .complete { padding: 32px; color: white; text-align: center; }
       .complete h2 { margin-top: 0; }
+      #study-target.researcher-review { background: #eef4ec; overflow: auto; }
+      #study-target.researcher-review .complete { color: #173a2e; }
+      #study-target.researcher-review .jspsych-content { height: auto; min-height: 100%; }
+      .researcher-review-form { width: min(100%, 640px); padding: 24px; text-align: left; }
+      .researcher-review-form h2 { margin-top: 0; }
+      .researcher-review-form fieldset { border: 1px solid #789184; border-radius: 12px; margin: 0 0 20px; padding: 16px; }
+      .researcher-review-form legend { font-weight: 700; }
+      .researcher-review-form fieldset label { display: inline-flex; align-items: center; gap: 8px; min-height: 52px; margin-right: 28px; }
+      .researcher-review-form input[type="radio"] { width: 24px; height: 24px; accent-color: #173a2e; }
+      .researcher-review-form textarea { display: block; width: 100%; margin: 8px 0 24px; padding: 12px; border: 1px solid #789184; border-radius: 8px; font: inherit; resize: vertical; }
     </style>
   </head>
 
@@ -113,13 +160,29 @@
     <main id="start-screen">
       <div>
         <h1>Project Sprouts</h1>
-        <p>This build plays through the closing message. Turn on the sound, then start when ready.</p>
+        <p>Enter the study IDs and check the headphone volume before handing the tablet to the child.</p>
+        <div class="study-fields">
+          <label for="subject-id">Subject ID
+            <input id="subject-id" type="text" required autocomplete="off" />
+          </label>
+          <label for="researcher-id">Researcher ID
+            <input id="researcher-id" type="text" required autocomplete="off" />
+          </label>
+        </div>
         <div class="start-actions">
-          <button id="start-button" type="button">Start study</button>
+          <button id="start-button" type="button" disabled>Start study</button>
+          <button id="sound-check-button" type="button">Sound check</button>
           <a class="admin-link" href="admin/index.html">Researcher tools</a>
         </div>
+        <p id="sound-check-status" role="status" style="margin: 16px auto 0;"></p>
+        <audio id="sound-check-audio" src="https://raw.githubusercontent.com/efosterhanson/CHS_stims/main/ProjectSprouts/warmup_trial_correct_audio.mp3" preload="auto"></audio>
       </div>
     </main>
+
+    <section id="child-start-screen" aria-label="Ready to play" hidden>
+      <img src="https://raw.githubusercontent.com/efosterhanson/CHS_stims/main/Tablet_Study1_Videos/Ready.png" alt="Kid Lab chameleon saying: Ready? Let's play!" />
+      <button id="child-start-button" type="button">START</button>
+    </section>
 
     <div id="study-target" hidden></div>
 
